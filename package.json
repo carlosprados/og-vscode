@@ -2,7 +2,7 @@
   "name": "og-vscode",
   "displayName": "OpenGate (og)",
   "description": "Edit OpenGate artifacts against a live platform. Unofficial community project, not an Ampl\u00eda product.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "carlosprados",
   "license": "Apache-2.0",
   "repository": {

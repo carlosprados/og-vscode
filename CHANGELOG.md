@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.0
+
+**Requires og 2.4.0.**
+
+### Added
+
+- **Widgets are editable like anything else.** Diff a widget's formatter against
+  the platform, see what deploying its dashboard would change, and deploy —
+  none of which was possible before, because og had no way to read one widget
+  file back or to compare a single dashboard. og 2.4.0 adds
+  `og dashboard show --path` and `og dashboard diff`, and this extension is a
+  pass-through to them.
+- A widget deploys **as its dashboard**, which is the smallest unit the platform
+  can address, and the confirmation says so before it sends anything. Same
+  boundary `og watch` already drew.
+
+### Fixed
+
+- **The minimum version said 2.2.0 while 0.3.0 needed 2.3.0** for `whoami`. An og
+  between the two was accepted silently and then failed its session check with no
+  explanation.
+- **Diff on a widget or a dashboard reported "unknown flag: --path"** — an error
+  about the extension's own invocation, which told the reader nothing.
+- **"What deploying this artifact would change" showed a help page on a widget or
+  a dashboard**, and **deploying a dashboard asked for confirmation against that
+  same help page** — a real write confirmed against a preview that was not one.
+  `og dashboard diff` did not exist, and cobra answers a subcommand it does not
+  have with the family's help and exit 0, so nothing looked wrong.
+
 ## 0.3.0
 
 ### Changed
