@@ -74,18 +74,19 @@ export class Diagnostics {
 
     const byFile = new Map<string, vscode.Diagnostic[]>();
     for (const finding of data.findings ?? []) {
-      // og keeps the file in its own field and its message reads as the
-      // continuation of it — "is missing, but the rule is in ADVANCED mode".
-      // On that file's own document it is right; anywhere else the message has
-      // to say what it is about, or it names nothing at all.
+      // A finding always lands on its own file, which VS Code will show in the
+      // Problems panel even when that file does not exist — which is the case
+      // that matters, since "javascript.js is missing" is a finding about a
+      // file that is not there. og's message reads as the continuation of the
+      // filename ("is missing, but the rule is in ADVANCED mode"), and the
+      // panel already supplies the name as the group header, so prefixing it
+      // here printed it twice.
       const target = finding.file ? path.join(art.dir, finding.file) : filePath;
-      const named = finding.file && target !== filePath;
-      const message = named ? `${finding.file} ${finding.message}` : finding.message;
 
       const line = Math.max((finding.line ?? 1) - 1, 0);
       const diagnostic = new vscode.Diagnostic(
         new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER),
-        message,
+        finding.message,
         SEVERITY[finding.severity] ?? vscode.DiagnosticSeverity.Warning,
       );
       diagnostic.source = "og";
