@@ -39,12 +39,14 @@ interface FamilyNode {
   spec: FamilySpec;
 }
 
-interface ArtifactNode {
+export interface ArtifactNode {
   type: "artifact";
   spec: FamilySpec;
   id: string;
   name: string;
   detail: string;
+  /** Path of the metadata file, when a copy is already in the workspace. */
+  local?: string;
 }
 
 interface MessageNode {
@@ -74,12 +76,17 @@ export class PlatformTree implements vscode.TreeDataProvider<Node> {
     }
 
     const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.None);
-    item.description = node.detail;
-    item.tooltip = `${node.spec.label.replace(/s$/, "")}\n${node.name}\n${node.id}`;
-    item.iconPath = new vscode.ThemeIcon("file-code");
-    item.contextValue = "ogArtifact";
-    // One click does the obvious thing: open it if it is already here, and
-    // offer to pull it if it is not.
+    item.description = node.local ? `${node.detail} · here`.replace(/^ · /, "") : node.detail;
+    item.tooltip = [
+      node.spec.label.replace(/s$/, ""),
+      node.name,
+      node.id,
+      node.local ? `pulled to ${path.dirname(node.local)}` : "not pulled yet",
+    ].join("\n");
+    item.iconPath = new vscode.ThemeIcon(node.local ? "file-code" : "cloud");
+    // The menu differs by whether it is here: offering Deploy on something you
+    // have not pulled is offering to deploy nothing.
+    item.contextValue = node.local ? "ogArtifactLocal" : "ogArtifactRemote";
     item.command = { command: "og.openOrPull", title: "Open", arguments: [node] };
     return item;
   }
@@ -105,14 +112,22 @@ export class PlatformTree implements vscode.TreeDataProvider<Node> {
       return [{ type: "message", text: "none in this organization" }];
     }
 
+    // One scan per family rather than one per artifact: the workspace is walked
+    // once and every node of this family is matched against the result.
+    const here = await localCopies(node.spec.meta);
+
     return items
-      .map((item) => ({
-        type: "artifact" as const,
-        spec: node.spec,
-        id: String(item[node.spec.idKey] ?? ""),
-        name: String(item.name ?? item.title ?? item[node.spec.idKey] ?? "unnamed"),
-        detail: describe(item),
-      }))
+      .map((item) => {
+        const id = String(item[node.spec.idKey] ?? "");
+        return {
+          type: "artifact" as const,
+          spec: node.spec,
+          id,
+          name: String(item.name ?? item.title ?? id ?? "unnamed"),
+          detail: describe(item),
+          local: here.get(id),
+        };
+      })
       .filter((a) => a.id !== "")
       .sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -188,21 +203,37 @@ export async function openOrPull(node: Node): Promise<void> {
   );
 }
 
-/** findLocal looks for an already-pulled copy carrying this identifier. */
-async function findLocal(meta: string, id: string): Promise<vscode.Uri | undefined> {
-  const candidates = await vscode.workspace.findFiles(`**/${meta}`, "**/node_modules/**", 500);
+/**
+ * localCopies maps identifier to metadata path for every pulled artifact of a
+ * family in the workspace.
+ *
+ * Matched on the identifier rather than the directory name: names are not
+ * unique and slugs are derived, but the identifier is what og itself matches on.
+ */
+async function localCopies(meta: string): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  const candidates = await vscode.workspace.findFiles(`**/${meta}`, "**/node_modules/**", 1000);
   for (const candidate of candidates) {
     try {
       const raw = Buffer.from(await vscode.workspace.fs.readFile(candidate)).toString("utf8");
-      if (JSON.parse(raw) && raw.includes(`"${id}"`)) {
-        return candidate;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      for (const key of ["identifier", "provisionProcessorId", "_id", "i"]) {
+        const value = parsed[key];
+        if (typeof value === "string" && value !== "" && !found.has(value)) {
+          found.set(value, candidate.fsPath);
+        }
       }
     } catch {
-      // A metadata file that does not parse is somebody else's problem; the
-      // validator reports it, and this should not stop the search.
+      // A metadata file that does not parse is the validator's business, not
+      // this scan's; skipping it must not abandon the rest.
     }
   }
-  return undefined;
+  return found;
+}
+
+async function findLocal(meta: string, id: string): Promise<vscode.Uri | undefined> {
+  const path = (await localCopies(meta)).get(id);
+  return path ? vscode.Uri.file(path) : undefined;
 }
 
 /** chooseTarget asks where to put a pull, defaulting to a folder per family. */

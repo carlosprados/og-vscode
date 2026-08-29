@@ -5,7 +5,8 @@
 ### Added
 
 - **Right-click menus** — an OpenGate submenu in the Explorer, the editor and the
-  editor tab, acting on the file you clicked.
+  editor tab, and a context menu on the Platform view whose entries depend on
+  whether the artifact is already in your workspace.
 
 - **Platform view** — browse Rules, Connector functions, Provision functions and
   Workspaces on the tenant; click one to open it if it is already in the

@@ -58,6 +58,11 @@
       {
         "command": "og.openOrPull",
         "title": "og: Open or pull this artifact"
+      },
+      {
+        "command": "og.pull",
+        "title": "og: Pull this artifact",
+        "shortTitle": "Pull"
       }
     ],
     "configuration": {
@@ -131,6 +136,10 @@
         {
           "command": "og.openOrPull",
           "when": "false"
+        },
+        {
+          "command": "og.pull",
+          "when": "false"
         }
       ],
       "explorer/context": [
@@ -174,6 +183,43 @@
         {
           "command": "og.typegen",
           "group": "3_tools@1"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "og.pull",
+          "when": "view == og.platform && viewItem == ogArtifactRemote",
+          "group": "1_get@1"
+        },
+        {
+          "command": "og.diff",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "1_read@1"
+        },
+        {
+          "command": "og.status",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "1_read@2"
+        },
+        {
+          "command": "og.validate",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "1_read@3"
+        },
+        {
+          "command": "og.deploy",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "2_write@1"
+        },
+        {
+          "command": "og.typegen",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "3_tools@1"
+        },
+        {
+          "command": "og.pull",
+          "when": "view == og.platform && viewItem == ogArtifactLocal",
+          "group": "3_tools@2"
         }
       ]
     },

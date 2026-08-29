@@ -16,7 +16,7 @@ import * as binary from "./binary";
 import * as cli from "./cli";
 import { Diagnostics } from "./diagnostics";
 import { RemoteContentProvider, SCHEME, openDiff } from "./remote";
-import { PlatformTree, openOrPull } from "./tree";
+import { ArtifactNode, PlatformTree, openOrPull } from "./tree";
 
 let diagnostics: Diagnostics;
 
@@ -52,11 +52,14 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("og.refreshTree", () => tree.refresh()),
     vscode.commands.registerCommand("og.openOrPull", (node) => openOrPull(node)),
-    vscode.commands.registerCommand("og.diff", (uri?: vscode.Uri) => openDiff(uri)),
-    vscode.commands.registerCommand("og.status", (uri?: vscode.Uri) => status(uri)),
-    vscode.commands.registerCommand("og.validate", (uri?: vscode.Uri) => withFile(uri, (f) => diagnostics.run(f))),
-    vscode.commands.registerCommand("og.deploy", (uri?: vscode.Uri) => deploy(uri)),
-    vscode.commands.registerCommand("og.typegen", (uri?: vscode.Uri) => typegen(uri)),
+    vscode.commands.registerCommand("og.diff", (arg?: unknown) => openDiff(toUri(arg))),
+    vscode.commands.registerCommand("og.status", (arg?: unknown) => status(toUri(arg))),
+    vscode.commands.registerCommand("og.validate", (arg?: unknown) =>
+      withFile(toUri(arg), (f) => diagnostics.run(f)),
+    ),
+    vscode.commands.registerCommand("og.deploy", (arg?: unknown) => deploy(toUri(arg))),
+    vscode.commands.registerCommand("og.typegen", (arg?: unknown) => typegen(toUri(arg))),
+    vscode.commands.registerCommand("og.pull", (node: ArtifactNode) => openOrPull(node).then(() => tree.refresh())),
   );
 
   // Saving is the only hook. Deliberately not `og watch`: two watchers over the
@@ -82,6 +85,25 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {
   diagnostics?.dispose();
+}
+
+/**
+ * toUri normalises what a command was invoked with.
+ *
+ * Four callers, three shapes: the palette passes nothing, the Explorer and
+ * editor menus pass a Uri, and the Platform view passes its own node. Resolving
+ * it here is what lets one command serve all of them instead of each surface
+ * getting its own.
+ */
+function toUri(arg: unknown): vscode.Uri | undefined {
+  if (arg instanceof vscode.Uri) {
+    return arg;
+  }
+  const node = arg as ArtifactNode | undefined;
+  if (node && node.type === "artifact" && node.local) {
+    return vscode.Uri.file(node.local);
+  }
+  return undefined;
 }
 
 /**
