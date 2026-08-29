@@ -16,7 +16,8 @@
   release's `checksums.txt`. Reports an og older than 2.2.0, which lacks the
   `show --path` the diff depends on.
 - **Diff against the platform** — VS Code's own diff between a file and its
-  remote content, through an `og-remote:` document provider.
+  remote content, through an `og-remote:` document provider. Invoked on an
+  artifact rather than a file, it resolves the code file to compare.
 - **What deploying would change** — `og diff`'s own rendering of the whole
   artifact, metadata included.
 - **Validation as diagnostics** — `og validate` findings in the Problems panel,

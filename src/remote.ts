@@ -5,6 +5,7 @@
 // editor. Nothing about diffing is implemented here, deliberately — the same
 // decision og.nvim took, for the same reason.
 
+import * as path from "node:path";
 import * as vscode from "vscode";
 import * as artifact from "./artifact";
 import * as cli from "./cli";
@@ -78,23 +79,53 @@ export async function openDiff(target?: vscode.Uri): Promise<void> {
     return;
   }
 
-  const rel = artifact.codeFile(art, filePath);
+  let rel = artifact.codeFile(art, filePath);
   if (!rel) {
     void vscode.window.showWarningMessage("og: this file is not inside the artifact directory");
     return;
   }
+
+  // Reached from the Platform view — or by right-clicking rule.json — the
+  // target is the artifact rather than one of its files. A diff needs a file,
+  // so resolve one: metadata is compared by "What deploying would change",
+  // which reports it structurally instead of as text.
   if (!rel.endsWith(".js")) {
-    void vscode.window.showInformationMessage(
-      `og: ${rel} is not a code file — "What deploying this artifact would change" covers metadata too`,
-    );
-    return;
+    const chosen = await chooseCodeFile(art);
+    if (!chosen) {
+      return;
+    }
+    rel = chosen;
   }
+  const localUri = vscode.Uri.file(path.join(art.dir, rel));
 
   await vscode.commands.executeCommand(
     "vscode.diff",
     uriFor(art, rel),
-    uri,
+    localUri,
     `${rel} — platform ↔ local`,
     { preview: true },
   );
+}
+
+/**
+ * chooseCodeFile picks which of an artifact's files to diff.
+ *
+ * One is the common case and asking about it would be a prompt with a single
+ * answer. Several happens on a widget with per-column formatters, and there is
+ * no basis for guessing which one was meant.
+ */
+async function chooseCodeFile(art: artifact.Artifact): Promise<string | undefined> {
+  const found = await vscode.workspace.findFiles(new vscode.RelativePattern(art.dir, "*.js"));
+  const names = found.map((f) => path.basename(f.fsPath)).sort();
+
+  if (names.length === 0) {
+    void vscode.window.showInformationMessage(
+      `og: this ${art.family.kind} has no code file to diff — "What deploying this artifact would change" compares its metadata`,
+    );
+    return undefined;
+  }
+  if (names.length === 1) {
+    return names[0];
+  }
+  return vscode.window.showQuickPick(names, { title: "Which file to compare against the platform?" });
 }

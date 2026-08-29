@@ -88,7 +88,7 @@ editing a widget acts on that widget and not on the workspace above it.
 
 | Command | What it does |
 |---|---|
-| **og: Diff this file against the platform** | Opens VS Code's own diff between your file and its remote content. The remote side is a read-only `og-remote:` document. |
+| **og: Diff this file against the platform** | Opens VS Code's own diff between your file and its remote content. The remote side is a read-only `og-remote:` document. Invoked on an artifact rather than a file — from the Platform view, or on `rule.json` — it resolves the artifact's code file, asking which when there is more than one. |
 | **og: What deploying this artifact would change** | The whole artifact — metadata and every code file — as rendered by `og diff`. For a workspace that is a tree of dashboards and widgets. |
 | **og: Validate this artifact** | `og validate` findings as native diagnostics. Local, no credentials. |
 | **og: Deploy this artifact** | Shows what would change, asks, then deploys. |
