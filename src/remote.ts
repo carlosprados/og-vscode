@@ -72,14 +72,30 @@ export async function openDiff(target?: vscode.Uri): Promise<void> {
     );
     return;
   }
-  if (!art.id) {
-    void vscode.window.showWarningMessage(
-      `og: this ${art.family.kind} has no identifier in ${art.family.meta} — nothing remote to compare against`,
+  if (!art.family.remoteFile) {
+    void vscode.window.showInformationMessage(
+      `og: og has no single-file view of a ${art.family.kind} — "What deploying this artifact would change" compares the whole tree`,
     );
     return;
   }
 
-  let rel = artifact.codeFile(art, filePath);
+  // A widget is read through its dashboard: `og dashboard show --path` takes the
+  // widget directory and the file, which is exactly the path the pull wrote.
+  const anchor = artifact.anchor(art);
+  if (!anchor) {
+    void vscode.window.showWarningMessage(
+      `og: a ${art.family.kind} is addressed through its dashboard, and this one is not inside a pulled dashboard directory`,
+    );
+    return;
+  }
+  if (!anchor.id) {
+    void vscode.window.showWarningMessage(
+      `og: this ${anchor.family.kind} has no identifier in ${anchor.family.meta} — nothing remote to compare against`,
+    );
+    return;
+  }
+
+  let rel = artifact.codeFile(anchor, filePath);
   if (!rel) {
     void vscode.window.showWarningMessage("og: this file is not inside the artifact directory");
     return;
@@ -90,19 +106,19 @@ export async function openDiff(target?: vscode.Uri): Promise<void> {
   // so resolve one: metadata is compared by "What deploying would change",
   // which reports it structurally instead of as text.
   if (!rel.endsWith(".js")) {
-    const chosen = await chooseCodeFile(art);
+    const chosen = await chooseCodeFile(art, anchor);
     if (!chosen) {
       return;
     }
     rel = chosen;
   }
-  const localUri = vscode.Uri.file(path.join(art.dir, rel));
+  const localUri = vscode.Uri.file(path.join(anchor.dir, rel));
 
   await vscode.commands.executeCommand(
     "vscode.diff",
-    uriFor(art, rel),
+    uriFor(anchor, rel),
     localUri,
-    `${rel} — platform ↔ local`,
+    `${path.basename(rel)} — platform ↔ local`,
     { preview: true },
   );
 }
@@ -110,13 +126,16 @@ export async function openDiff(target?: vscode.Uri): Promise<void> {
 /**
  * chooseCodeFile picks which of an artifact's files to diff.
  *
- * One is the common case and asking about it would be a prompt with a single
- * answer. Several happens on a widget with per-column formatters, and there is
- * no basis for guessing which one was meant.
+ * The flat families carry exactly one code field, so the question never comes up
+ * for them. A widget does: a list widget has one formatter per column, and there
+ * is no basis for guessing which of five was meant.
  */
-async function chooseCodeFile(art: artifact.Artifact): Promise<string | undefined> {
+async function chooseCodeFile(art: artifact.Artifact, anchor: artifact.Artifact): Promise<string | undefined> {
   const found = await vscode.workspace.findFiles(new vscode.RelativePattern(art.dir, "*.js"));
-  const names = found.map((f) => path.basename(f.fsPath)).sort();
+  // Named relative to the anchor, since that is what the remote side is asked
+  // for: on a widget that is "<widget-dir>/<file>.js".
+  const prefix = art.dir === anchor.dir ? "" : path.relative(anchor.dir, art.dir).split(path.sep).join("/") + "/";
+  const names = found.map((f) => prefix + path.basename(f.fsPath)).sort();
 
   if (names.length === 0) {
     void vscode.window.showInformationMessage(

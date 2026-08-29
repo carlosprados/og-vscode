@@ -9,8 +9,9 @@
 //      extension and nothing else.
 //
 // The version is checked as well as the presence, because the failure otherwise
-// is baffling: an og older than 2.2.0 has no `show --path`, so the diff opens
-// empty and nothing says why.
+// is baffling: an og older than 2.4.0 has no `dashboard show`, so a widget diff
+// opens empty; older than 2.3.0 has no `whoami`, so the session is never checked
+// and a lapsed login surfaces as a 401 instead.
 
 import { execFile } from "node:child_process";
 import * as crypto from "node:crypto";
@@ -18,8 +19,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 
-/** The oldest og that has `show --path`, which the diff view depends on. */
-export const MINIMUM_VERSION = "2.2.0";
+/** The oldest og with everything this extension uses: `dashboard show`, added in 2.4.0. */
+export const MINIMUM_VERSION = "2.4.0";
 
 const REPO = "carlosprados/og-cli";
 
@@ -54,7 +55,7 @@ export async function resolve(context: vscode.ExtensionContext): Promise<string 
       warnedAboutVersion = true;
       void vscode.window
         .showWarningMessage(
-          `og ${version} is older than ${MINIMUM_VERSION}, which added \`show --path\`. The diff view will not work.`,
+          `og ${version} is older than ${MINIMUM_VERSION}. Some commands will not work: editing widgets needs \`dashboard show\` and the session check needs \`whoami\`.`,
           "Download a newer one",
         )
         .then(async (choice) => {
