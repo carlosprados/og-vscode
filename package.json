@@ -27,23 +27,28 @@
     "commands": [
       {
         "command": "og.diff",
-        "title": "og: Diff this file against the platform"
+        "title": "og: Diff this file against the platform",
+        "shortTitle": "Diff against the platform"
       },
       {
         "command": "og.status",
-        "title": "og: What deploying this artifact would change"
+        "title": "og: What deploying this artifact would change",
+        "shortTitle": "What deploying would change"
       },
       {
         "command": "og.validate",
-        "title": "og: Validate this artifact"
+        "title": "og: Validate this artifact",
+        "shortTitle": "Validate"
       },
       {
         "command": "og.deploy",
-        "title": "og: Deploy this artifact"
+        "title": "og: Deploy this artifact",
+        "shortTitle": "Deploy"
       },
       {
         "command": "og.typegen",
-        "title": "og: Regenerate editor typings"
+        "title": "og: Regenerate editor typings",
+        "shortTitle": "Regenerate typings"
       },
       {
         "command": "og.refreshTree",
@@ -127,8 +132,58 @@
           "command": "og.openOrPull",
           "when": "false"
         }
+      ],
+      "explorer/context": [
+        {
+          "submenu": "og.artifact",
+          "when": "og.enabled && (resourceFilename == rule.json || resourceFilename == connectorfunction.json || resourceFilename == provisionfunction.json || resourceFilename == widget.json || resourceFilename == dashboard.json || resourceFilename == workspace.json || resourceExtname == .js)",
+          "group": "7_modification"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "og.artifact",
+          "when": "og.enabled && (resourceFilename == rule.json || resourceFilename == connectorfunction.json || resourceFilename == provisionfunction.json || resourceFilename == widget.json || resourceFilename == dashboard.json || resourceFilename == workspace.json || resourceExtname == .js)",
+          "group": "1_modification"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "submenu": "og.artifact",
+          "when": "og.enabled && (resourceFilename == rule.json || resourceFilename == connectorfunction.json || resourceFilename == provisionfunction.json || resourceFilename == widget.json || resourceFilename == dashboard.json || resourceFilename == workspace.json || resourceExtname == .js)",
+          "group": "1_modification"
+        }
+      ],
+      "og.artifact": [
+        {
+          "command": "og.diff",
+          "group": "1_read@1"
+        },
+        {
+          "command": "og.status",
+          "group": "1_read@2"
+        },
+        {
+          "command": "og.validate",
+          "group": "1_read@3"
+        },
+        {
+          "command": "og.deploy",
+          "group": "2_write@1"
+        },
+        {
+          "command": "og.typegen",
+          "group": "3_tools@1"
+        }
       ]
-    }
+    },
+    "submenus": [
+      {
+        "id": "og.artifact",
+        "label": "OpenGate",
+        "icon": "resources/og.svg"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p .",

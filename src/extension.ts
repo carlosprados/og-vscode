@@ -23,6 +23,11 @@ let diagnostics: Diagnostics;
 export function activate(context: vscode.ExtensionContext): void {
   cli.init(context);
 
+  // Gates the right-click menus. The extension activates on a workspace that
+  // contains artifacts, so without this key the menu entries would advertise
+  // themselves on every .js file in every unrelated project.
+  void vscode.commands.executeCommand("setContext", "og.enabled", true);
+
   diagnostics = new Diagnostics();
   context.subscriptions.push(diagnostics);
 
@@ -47,11 +52,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("og.refreshTree", () => tree.refresh()),
     vscode.commands.registerCommand("og.openOrPull", (node) => openOrPull(node)),
-    vscode.commands.registerCommand("og.diff", () => openDiff()),
-    vscode.commands.registerCommand("og.status", () => status()),
-    vscode.commands.registerCommand("og.validate", () => withActiveFile((f) => diagnostics.run(f))),
-    vscode.commands.registerCommand("og.deploy", () => deploy()),
-    vscode.commands.registerCommand("og.typegen", () => typegen()),
+    vscode.commands.registerCommand("og.diff", (uri?: vscode.Uri) => openDiff(uri)),
+    vscode.commands.registerCommand("og.status", (uri?: vscode.Uri) => status(uri)),
+    vscode.commands.registerCommand("og.validate", (uri?: vscode.Uri) => withFile(uri, (f) => diagnostics.run(f))),
+    vscode.commands.registerCommand("og.deploy", (uri?: vscode.Uri) => deploy(uri)),
+    vscode.commands.registerCommand("og.typegen", (uri?: vscode.Uri) => typegen(uri)),
   );
 
   // Saving is the only hook. Deliberately not `og watch`: two watchers over the
@@ -79,18 +84,27 @@ export function deactivate(): void {
   diagnostics?.dispose();
 }
 
-function withActiveFile(fn: (filePath: string) => Promise<void> | void): void {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.uri.scheme !== "file") {
+/**
+ * withFile resolves which file a command acts on.
+ *
+ * Commands are reached three ways: from the palette, where it is the active
+ * editor; from the Explorer context menu, where VS Code passes the clicked
+ * resource; and from the editor context menu, where it passes the document.
+ * Taking the argument when there is one is what makes the right-click menus act
+ * on what was right-clicked rather than on whatever happened to be focused.
+ */
+function withFile(target: vscode.Uri | undefined, fn: (filePath: string) => Promise<void> | void): void {
+  const uri = target ?? vscode.window.activeTextEditor?.document.uri;
+  if (!uri || uri.scheme !== "file") {
     void vscode.window.showWarningMessage("og: no file is open");
     return;
   }
-  void fn(editor.document.uri.fsPath);
+  void fn(uri.fsPath);
 }
 
 /** status shows og's own rendering of what deploying would change. */
-function status(): void {
-  withActiveFile(async (filePath) => {
+function status(uri?: vscode.Uri): void {
+  withFile(uri, async (filePath) => {
     const art = artifact.find(filePath);
     if (!art) {
       void vscode.window.showWarningMessage("og: this file is not inside an artifact directory");
@@ -107,8 +121,8 @@ function status(): void {
   });
 }
 
-function deploy(): void {
-  withActiveFile((filePath) => runDeploy(filePath, true));
+function deploy(uri?: vscode.Uri): void {
+  withFile(uri, (filePath) => runDeploy(filePath, true));
 }
 
 /** runDeploy pushes the artifact, showing what would change first when asked. */
@@ -151,8 +165,8 @@ async function runDeploy(filePath: string, confirm: boolean): Promise<void> {
 }
 
 /** typegen regenerates the datamodel-derived typings for this artifact. */
-function typegen(): void {
-  withActiveFile(async (filePath) => {
+function typegen(uri?: vscode.Uri): void {
+  withFile(uri, async (filePath) => {
     const art = artifact.find(filePath);
     if (!art) {
       void vscode.window.showWarningMessage("og: this file is not inside an artifact directory");

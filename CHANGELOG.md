@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Right-click menus** — an OpenGate submenu in the Explorer, the editor and the
+  editor tab, acting on the file you clicked.
+
 - **Platform view** — browse Rules, Connector functions, Provision functions and
   Workspaces on the tenant; click one to open it if it is already in the
   workspace, or pull it if it is not.

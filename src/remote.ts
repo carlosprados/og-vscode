@@ -50,13 +50,19 @@ export class RemoteContentProvider implements vscode.TextDocumentContentProvider
   }
 }
 
-/** openDiff shows the active file against its remote content. */
-export async function openDiff(): Promise<void> {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) {
+/**
+ * openDiff shows a file against its remote content.
+ *
+ * The uri is optional because the same command is reached three ways: the
+ * palette, where it means the active editor, and the two context menus, where
+ * VS Code passes the resource that was clicked.
+ */
+export async function openDiff(target?: vscode.Uri): Promise<void> {
+  const uri = target ?? vscode.window.activeTextEditor?.document.uri;
+  if (!uri || uri.scheme !== "file") {
     return;
   }
-  const filePath = editor.document.uri.fsPath;
+  const filePath = uri.fsPath;
 
   const art = artifact.find(filePath);
   if (!art) {
@@ -87,7 +93,7 @@ export async function openDiff(): Promise<void> {
   await vscode.commands.executeCommand(
     "vscode.diff",
     uriFor(art, rel),
-    editor.document.uri,
+    uri,
     `${rel} — platform ↔ local`,
     { preview: true },
   );

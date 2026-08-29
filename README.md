@@ -52,7 +52,7 @@ diff and no explanation.
 
 ## The Platform view
 
-An OpenGate icon in the activity bar lists what is on the platform: Rules,
+A globe in the activity bar lists what is on the platform: Rules,
 Connector functions, Provision functions and Workspaces, each expanded on
 demand. Clicking an artifact opens it if it is already in your workspace, and
 offers to pull it if it is not — matched by identifier, because names are not
@@ -61,6 +61,17 @@ unique and directory slugs are derived.
 A family that cannot be listed shows the reason under its own node rather than
 as a notification: workspaces need a Web API token, and that failing should not
 hide the other three.
+
+## Right-click
+
+Everything is on a mouse. Right-clicking a file — in the Explorer, in the
+editor, or on its tab — gains an **OpenGate** submenu with diff, what-would-
+change, validate, deploy and regenerate-typings, acting on the file you clicked
+rather than on whatever happened to be focused.
+
+The submenu appears only on files that could belong to an artifact, and only in
+a workspace that has some: the extension activates on one, and the menu is gated
+on that, so it stays out of unrelated projects.
 
 ## Commands
 
