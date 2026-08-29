@@ -12,6 +12,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import * as artifact from "./artifact";
+import * as auth from "./auth";
 import * as binary from "./binary";
 import * as cli from "./cli";
 import { Diagnostics } from "./diagnostics";
@@ -50,6 +51,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.window.registerTreeDataProvider("og.platform", tree));
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("og.login", async () => {
+      if (await auth.login(context)) {
+        tree.refresh();
+      }
+    }),
     vscode.commands.registerCommand("og.refreshTree", () => tree.refresh()),
     vscode.commands.registerCommand("og.openOrPull", (node) => openOrPull(node)),
     vscode.commands.registerCommand("og.diff", (arg?: unknown) => openDiff(toUri(arg))),

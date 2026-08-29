@@ -115,11 +115,29 @@ production-profile guard, and it is a better place for it.
 Do not run both at once over the same tree: two watchers produce duplicate
 deploys.
 
+## Logging in
+
+**og: Log in to OpenGate** collects host, email, password and — if the account
+has it — a two-factor code, then runs `og login`. The extension implements no
+authentication of its own: og writes the token into its own profile
+(`~/.og/config.yaml`, created if absent, mode 0600) and **no password is stored
+anywhere**. The password reaches og through the environment rather than the
+command line, because arguments are readable by anything that can list
+processes.
+
+You are asked how much access you want, because it is a real trade: OpenGate
+allows one web session per user, so signing in to the Web API — which workspaces
+and dashboards need — can evict your browser session on the same account. The
+alternative covers rules, connector functions and provision functions and leaves
+your browser alone.
+
+Any command that fails with a 401 offers to log in, rather than telling you to
+open a terminal.
+
 ## Credentials
 
 None are stored here. Host, token, organization and profile all come from og's
-own configuration (`~/.og/config.yaml`), so there is exactly one place they can
-be wrong.
+own configuration, so there is exactly one place they can be wrong.
 
 ## Related
 

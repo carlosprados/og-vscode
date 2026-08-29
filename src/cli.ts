@@ -9,6 +9,7 @@
 
 import { execFile } from "node:child_process";
 import * as vscode from "vscode";
+import * as auth from "./auth";
 import * as binary from "./binary";
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -54,7 +55,7 @@ function globalArgs(): string[] {
  * is og working correctly, and turning that into an exception would make every
  * caller unwrap it again.
  */
-export async function run(args: string[], cwd?: string): Promise<Result> {
+export async function run(args: string[], cwd?: string, env?: Record<string, string>): Promise<Result> {
   if (!extensionContext) {
     return { code: EXIT_FAILURE, stdout: "", stderr: "the extension is not initialised" };
   }
@@ -72,7 +73,10 @@ export async function run(args: string[], cwd?: string): Promise<Result> {
     execFile(
       bin,
       full,
-      { cwd, timeout, maxBuffer: 32 * 1024 * 1024 },
+      // env is an overlay, not a replacement: og still needs PATH and HOME.
+      // Secrets travel here rather than in `full`, because arguments are
+      // visible to anything that can read the process list.
+      { cwd, timeout, maxBuffer: 32 * 1024 * 1024, env: env ? { ...process.env, ...env } : undefined },
       (error, stdout, stderr) => {
         if (error && typeof (error as { code?: unknown }).code === "string") {
           // Spawn failure — ENOENT and friends — rather than a non-zero exit.
@@ -119,5 +123,20 @@ export function reportFailure(res: Result, context: string): void {
     // reported with the choices that go with it.
     return;
   }
+
+  // Not being logged in is the one failure with an obvious next step, and the
+  // one most likely to greet somebody who installed this and has never run the
+  // CLI. Telling them to open a terminal would be leaving the job half done.
+  if (auth.looksUnauthenticated(message)) {
+    void vscode.window
+      .showErrorMessage(`og: ${context}\n${message}`, "Log in")
+      .then((choice) => {
+        if (choice === "Log in") {
+          void vscode.commands.executeCommand("og.login");
+        }
+      });
+    return;
+  }
+
   void vscode.window.showErrorMessage(`og: ${context}\n${message}`);
 }

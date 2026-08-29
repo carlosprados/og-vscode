@@ -4,6 +4,10 @@
 
 ### Added
 
+- **Logging in from the editor** — collects credentials and runs `og login`;
+  the extension stores nothing and a 401 offers to log in rather than sending
+  you to a terminal.
+
 - **Right-click menus** — an OpenGate submenu in the Explorer, the editor and the
   editor tab, and a context menu on the Platform view whose entries depend on
   whether the artifact is already in your workspace.

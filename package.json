@@ -26,6 +26,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "og.login",
+        "title": "og: Log in to OpenGate",
+        "shortTitle": "Log in"
+      },
+      {
         "command": "og.diff",
         "title": "og: Diff this file against the platform",
         "shortTitle": "Diff against the platform"
