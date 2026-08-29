@@ -1,0 +1,43 @@
+{
+  "name": "og-vscode",
+  "displayName": "OpenGate (og)",
+  "description": "Edit OpenGate artifacts against a live platform. Unofficial community project, not an Amplía product.",
+  "version": "0.1.0",
+  "publisher": "carlosprados",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "https://github.com/carlosprados/og-vscode" },
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "activationEvents": ["workspaceContains:**/rule.json", "workspaceContains:**/connectorfunction.json", "workspaceContains:**/provisionfunction.json", "workspaceContains:**/widget.json"],
+  "contributes": {
+    "commands": [
+      { "command": "og.diff", "title": "og: Diff this file against the platform" },
+      { "command": "og.status", "title": "og: What deploying this artifact would change" },
+      { "command": "og.validate", "title": "og: Validate this artifact" },
+      { "command": "og.deploy", "title": "og: Deploy this artifact" },
+      { "command": "og.typegen", "title": "og: Regenerate editor typings" }
+    ],
+    "configuration": {
+      "title": "OpenGate (og)",
+      "properties": {
+        "og.path": { "type": "string", "default": "og", "markdownDescription": "Path to the `og` binary. Found on `PATH` by default." },
+        "og.org": { "type": ["string", "null"], "default": null, "description": "Organization, only if it should differ from og's own default." },
+        "og.profile": { "type": ["string", "null"], "default": null, "description": "og profile to use." },
+        "og.validateOnSave": { "type": "boolean", "default": true, "description": "Validate the artifact after saving. Local, no credentials." },
+        "og.deployOnSave": { "type": "boolean", "default": false, "markdownDescription": "Deploy after saving. Off by default: writes to a live platform. `og watch` is the supported way to do this from a terminal." },
+        "og.timeout": { "type": "number", "default": 30000, "description": "Milliseconds before a CLI call is abandoned." }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p .",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5"
+  }
+}
