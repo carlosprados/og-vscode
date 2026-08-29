@@ -1,0 +1,10 @@
+# Sources and build inputs: the extension ships dist/, not src/.
+src/**
+tsconfig.json
+.vscode/**
+.github/**
+node_modules/**
+**/*.map
+**/*.ts
+.gitignore
+PUBLISHING.md

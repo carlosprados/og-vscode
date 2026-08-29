@@ -133,11 +133,32 @@
   "scripts": {
     "compile": "tsc -p .",
     "watch": "tsc -w -p .",
-    "package": "vsce package"
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile",
+    "publish:vsce": "vsce publish",
+    "publish:ovsx": "ovsx publish"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@vscode/vsce": "^3",
+    "ovsx": "^0.10"
+  },
+  "icon": "resources/icon.png",
+  "keywords": [
+    "opengate",
+    "iot",
+    "amplia",
+    "og",
+    "connector functions"
+  ],
+  "bugs": {
+    "url": "https://github.com/carlosprados/og-vscode/issues"
+  },
+  "homepage": "https://github.com/carlosprados/og-vscode#readme",
+  "galleryBanner": {
+    "color": "#1f2430",
+    "theme": "dark"
   }
 }
