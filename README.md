@@ -50,7 +50,24 @@ which the diff depends on. An older one on your PATH is detected and reported,
 with the offer to fetch a newer one, rather than failing later with an empty
 diff and no explanation.
 
+## The Platform view
+
+An OpenGate icon in the activity bar lists what is on the platform: Rules,
+Connector functions, Provision functions and Workspaces, each expanded on
+demand. Clicking an artifact opens it if it is already in your workspace, and
+offers to pull it if it is not — matched by identifier, because names are not
+unique and directory slugs are derived.
+
+A family that cannot be listed shows the reason under its own node rather than
+as a notification: workspaces need a Web API token, and that failing should not
+hide the other three.
+
 ## Commands
+
+Every command acts on the artifact the active file belongs to, found by walking
+up for `rule.json`, `connectorfunction.json`, `provisionfunction.json`,
+`widget.json`, `dashboard.json` or `workspace.json`. The nearest one wins, so
+editing a widget acts on that widget and not on the workspace above it.
 
 | Command | What it does |
 |---|---|
@@ -59,11 +76,6 @@ diff and no explanation.
 | **og: Validate this artifact** | `og validate` findings as native diagnostics. Local, no credentials. |
 | **og: Deploy this artifact** | Shows what would change, asks, then deploys. |
 | **og: Regenerate editor typings** | The typings are datamodel-derived and go stale when the organization gains a datastream. |
-
-Every command acts on the artifact the active file belongs to, found by walking
-up for `rule.json`, `connectorfunction.json`, `provisionfunction.json`,
-`widget.json`, `dashboard.json` or `workspace.json`. The nearest one wins, so
-editing a widget acts on that widget and not on the workspace above it.
 
 ## Settings
 

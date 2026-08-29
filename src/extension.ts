@@ -16,6 +16,7 @@ import * as binary from "./binary";
 import * as cli from "./cli";
 import { Diagnostics } from "./diagnostics";
 import { RemoteContentProvider, SCHEME, openDiff } from "./remote";
+import { PlatformTree, openOrPull } from "./tree";
 
 let diagnostics: Diagnostics;
 
@@ -40,7 +41,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.registerTextDocumentContentProvider(SCHEME, new RemoteContentProvider()),
   );
 
+  const tree = new PlatformTree();
+  context.subscriptions.push(vscode.window.registerTreeDataProvider("og.platform", tree));
+
   context.subscriptions.push(
+    vscode.commands.registerCommand("og.refreshTree", () => tree.refresh()),
+    vscode.commands.registerCommand("og.openOrPull", (node) => openOrPull(node)),
     vscode.commands.registerCommand("og.diff", () => openDiff()),
     vscode.commands.registerCommand("og.status", () => status()),
     vscode.commands.registerCommand("og.validate", () => withActiveFile((f) => diagnostics.run(f))),
