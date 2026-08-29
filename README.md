@@ -150,7 +150,10 @@ evict your browser session on the same account, repeatedly. Declining it covers
 rules, connector functions and provision functions and leaves your browser
 alone. A dedicated account for the CLI avoids the question entirely.
 
-Any command that fails with a 401 offers to log in.
+Commands that need the platform check the session **before** doing the work, not
+after failing: `og whoami` reads the token's own claims locally, so it costs a
+process and no request. If there is no session, or it expired, you are told
+which and offered a login. Anything that still fails with a 401 offers one too.
 
 ---
 
@@ -180,7 +183,8 @@ both over the same tree: two watchers produce duplicate deploys.
 
 | What you see | What it means |
 |---|---|
-| `HTTP 401: Unauthorized` | No session. Take the **Log in** button on the error |
+| *you are not logged in* / *your session expired* | Take **Log in**. The difference matters: one means you never did, the other that it lapsed |
+| `HTTP 401: Unauthorized` | A session the platform rejected. Take the **Log in** button on the error |
 | *the CLI was not found* | No `og` on `PATH`. Take **Download it**, or set `og.path` |
 | *older than 2.2.0* | Your og predates `show --path`, which the diff needs. Take the offer to fetch a newer one |
 | The **OpenGate** submenu is missing | The extension activates on a folder that contains artifacts. Open one, or pull something from the Platform view first |

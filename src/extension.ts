@@ -58,13 +58,29 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("og.refreshTree", () => tree.refresh()),
     vscode.commands.registerCommand("og.openOrPull", (node) => openOrPull(node)),
-    vscode.commands.registerCommand("og.diff", (arg?: unknown) => openDiff(toUri(arg))),
-    vscode.commands.registerCommand("og.status", (arg?: unknown) => status(toUri(arg))),
+    vscode.commands.registerCommand("og.diff", async (arg?: unknown) => {
+      if (await auth.ensure(context)) {
+        await openDiff(toUri(arg));
+      }
+    }),
+    vscode.commands.registerCommand("og.status", async (arg?: unknown) => {
+      if (await auth.ensure(context)) {
+        status(toUri(arg));
+      }
+    }),
     vscode.commands.registerCommand("og.validate", (arg?: unknown) =>
       withFile(toUri(arg), (f) => diagnostics.run(f)),
     ),
-    vscode.commands.registerCommand("og.deploy", (arg?: unknown) => deploy(toUri(arg))),
-    vscode.commands.registerCommand("og.typegen", (arg?: unknown) => typegen(toUri(arg))),
+    vscode.commands.registerCommand("og.deploy", async (arg?: unknown) => {
+      if (await auth.ensure(context)) {
+        deploy(toUri(arg));
+      }
+    }),
+    vscode.commands.registerCommand("og.typegen", async (arg?: unknown) => {
+      if (await auth.ensure(context)) {
+        typegen(toUri(arg));
+      }
+    }),
     vscode.commands.registerCommand("og.pull", (node: ArtifactNode) => openOrPull(node).then(() => tree.refresh())),
   );
 

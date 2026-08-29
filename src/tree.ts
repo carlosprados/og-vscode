@@ -10,6 +10,7 @@
 
 import * as path from "node:path";
 import * as vscode from "vscode";
+import * as auth from "./auth";
 import * as cli from "./cli";
 
 interface FamilySpec {
@@ -52,6 +53,8 @@ export interface ArtifactNode {
 interface MessageNode {
   type: "message";
   text: string;
+  /** A message that can be acted on, e.g. "not logged in" → log in. */
+  action?: { command: string; title: string };
 }
 
 export class PlatformTree implements vscode.TreeDataProvider<Node> {
@@ -65,7 +68,10 @@ export class PlatformTree implements vscode.TreeDataProvider<Node> {
   getTreeItem(node: Node): vscode.TreeItem {
     if (node.type === "message") {
       const item = new vscode.TreeItem(node.text, vscode.TreeItemCollapsibleState.None);
-      item.iconPath = new vscode.ThemeIcon("info");
+      item.iconPath = new vscode.ThemeIcon(node.action ? "account" : "info");
+      if (node.action) {
+        item.command = { command: node.action.command, title: node.action.title };
+      }
       return item;
     }
     if (node.type === "family") {
@@ -97,6 +103,19 @@ export class PlatformTree implements vscode.TreeDataProvider<Node> {
     }
     if (node.type !== "family") {
       return [];
+    }
+
+    // Ask before listing rather than translating the 401 afterwards: "not
+    // logged in" deserves a way out, not an error message under a node.
+    const current = await auth.session();
+    if (current && !current.loggedIn) {
+      return [
+        {
+          type: "message",
+          text: current.expired ? "session expired — log in" : "not logged in — log in",
+          action: { command: "og.login", title: "Log in" },
+        },
+      ];
     }
 
     const { data, res } = await cli.runJson<unknown>([node.spec.command, node.spec.list]);

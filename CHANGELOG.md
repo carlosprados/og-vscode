@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+
+- **The session is checked before the work, not after the failure.** Commands
+  that need the platform ask `og whoami` first — local and instant, no request —
+  and offer to log in when there is no session or it has expired, saying which.
+  The Platform view shows the same under the family you expanded, with a way
+  out, instead of a raw 401.
+- Requires og 2.3.0 for `whoami`. An older one degrades to the previous
+  behaviour rather than being blocked: a question that cannot be asked is not
+  the same as a "no".
+
+
 ## 0.2.0
 
 ### Added

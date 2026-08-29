@@ -14,6 +14,66 @@ import * as vscode from "vscode";
 import * as binary from "./binary";
 import * as cli from "./cli";
 
+/** What `og whoami -o json` reports. */
+export interface Session {
+  profile: string;
+  host: string;
+  organization?: string;
+  loggedIn: boolean;
+  user?: string;
+  name?: string;
+  expiresAt?: string;
+  expired: boolean;
+  expiresIn?: string;
+  webSession: boolean;
+  problem?: string;
+}
+
+/**
+ * session asks og what session it holds, or undefined when og cannot say.
+ *
+ * Local and instant on og's side — it reads the token's own claims rather than
+ * making a request — so this is cheap enough to call before doing work instead
+ * of discovering the answer from a 401 afterwards.
+ *
+ * undefined means the question could not be asked: an og too old to have
+ * whoami, or no binary. That is not the same as "not logged in", and callers
+ * must not treat it as such.
+ */
+export async function session(): Promise<Session | undefined> {
+  const { data, res } = await cli.runJson<Session>(["whoami"]);
+  // Exit 1 is a real answer — no session — not a failure. Only a missing
+  // command or an unparseable payload leaves the question unanswered.
+  if (!data || (res.code !== cli.EXIT_OK && res.code !== cli.EXIT_DIFF)) {
+    return undefined;
+  }
+  return data;
+}
+
+/**
+ * ensure checks for a usable session and offers to fix it when there is none.
+ *
+ * Returns true when work can proceed. Silent when everything is in order, and
+ * silent too when og cannot answer — an older binary should degrade to the old
+ * behaviour of finding out from the failure, not be blocked by a check it
+ * cannot perform.
+ */
+export async function ensure(context: vscode.ExtensionContext): Promise<boolean> {
+  const current = await session();
+  if (!current || current.loggedIn) {
+    return true;
+  }
+
+  const reason = current.expired
+    ? `og: your session expired${current.user ? ` (${current.user})` : ""}.`
+    : "og: you are not logged in.";
+  const choice = await vscode.window.showWarningMessage(reason, "Log in");
+  if (choice !== "Log in") {
+    return false;
+  }
+  return login(context);
+}
+
 /**
  * looksUnauthenticated recognises og's own message for having no session.
  *
