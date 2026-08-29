@@ -19,19 +19,33 @@ export interface Family {
   idKey: string;
   /** Whether `og <command> validate` exists for it. */
   validatable: boolean;
+  /** Whether one file can be read back from the platform. */
+  remoteFile: boolean;
+  /** "self", or the kind of the enclosing artifact that addresses it remotely. */
+  anchor: "self" | "dashboard";
 }
 
 /**
  * Ordered most specific first, so a widget directory inside a dashboard
  * resolves to the widget.
+ *
+ * `anchor` records which artifact addresses this one on the platform, and it is
+ * not always itself: a widget is a grid item rather than something the platform
+ * can name, so its code is read and its changes compared through the dashboard
+ * it sits in. That is og's own boundary — `og workspace watch` deploys a widget
+ * edit as its dashboard — and following it here is what lets the rest of this
+ * extension stay a straight pass-through to the binary.
+ *
+ * A workspace is the one artifact with no single-file view: `og workspace diff`
+ * compares the whole tree, and there is no `og workspace show --path`.
  */
 export const FAMILIES: Family[] = [
-  { kind: "widget", meta: "widget.json", command: "widget", idKey: "i", validatable: false },
-  { kind: "dashboard", meta: "dashboard.json", command: "dashboard", idKey: "_id", validatable: false },
-  { kind: "rule", meta: "rule.json", command: "rules", idKey: "identifier", validatable: true },
-  { kind: "connector-function", meta: "connectorfunction.json", command: "connectors", idKey: "identifier", validatable: true },
-  { kind: "provision-function", meta: "provisionfunction.json", command: "provision", idKey: "provisionProcessorId", validatable: true },
-  { kind: "workspace", meta: "workspace.json", command: "workspace", idKey: "_id", validatable: false },
+  { kind: "widget", meta: "widget.json", command: "widget", idKey: "i", validatable: false, remoteFile: true, anchor: "dashboard" },
+  { kind: "dashboard", meta: "dashboard.json", command: "dashboard", idKey: "_id", validatable: false, remoteFile: true, anchor: "self" },
+  { kind: "rule", meta: "rule.json", command: "rules", idKey: "identifier", validatable: true, remoteFile: true, anchor: "self" },
+  { kind: "connector-function", meta: "connectorfunction.json", command: "connectors", idKey: "identifier", validatable: true, remoteFile: true, anchor: "self" },
+  { kind: "provision-function", meta: "provisionfunction.json", command: "provision", idKey: "provisionProcessorId", validatable: true, remoteFile: true, anchor: "self" },
+  { kind: "workspace", meta: "workspace.json", command: "workspace", idKey: "_id", validatable: false, remoteFile: false, anchor: "self" },
 ];
 
 export interface Artifact {
@@ -79,6 +93,36 @@ export function find(filePath: string): Artifact | undefined {
         }
         return { dir, family, id: typeof id === "string" && id !== "" ? id : undefined, meta };
       }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      return undefined;
+    }
+    dir = parent;
+  }
+}
+
+/**
+ * anchor returns the artifact that addresses this one on the platform.
+ *
+ * Itself for everything but a widget, which is addressed through the dashboard
+ * it belongs to. Reports and returns undefined when that dashboard is not there,
+ * because a widget directory on its own is not something og can act on.
+ */
+export function anchor(art: Artifact): Artifact | undefined {
+  if (art.family.anchor === "self") {
+    return art;
+  }
+  const target = FAMILIES.find((f) => f.kind === art.family.anchor);
+  if (!target) {
+    return art;
+  }
+
+  let dir = path.dirname(art.dir);
+  for (;;) {
+    const metaPath = path.join(dir, target.meta);
+    if (fs.existsSync(metaPath)) {
+      return find(metaPath);
     }
     const parent = path.dirname(dir);
     if (parent === dir) {

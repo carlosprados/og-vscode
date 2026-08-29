@@ -124,10 +124,31 @@ offers only **Pull** — everything else needs a local directory to act on.
 |---|---|
 | **Log in to OpenGate** | Credentials → `og login`. Nothing stored here. |
 | **Diff this file against the platform** | VS Code's own diff against the remote content. Invoked on an artifact rather than a file, it resolves the code file, asking which when there is more than one. |
-| **What deploying this artifact would change** | The whole artifact — metadata and every code file — as `og diff` renders it. For a workspace, a tree of dashboards and widgets. |
+| **What deploying this artifact would change** | The whole artifact — metadata and every code file — as `og diff` renders it. For a workspace, a tree of dashboards and widgets; on a dashboard or a widget, the workspace it belongs to. |
 | **Validate this artifact** | Findings in the Problems panel. Local, no credentials, milliseconds. Also runs on save. |
 | **Deploy this artifact** | Shows what would change, asks, then deploys. |
 | **Regenerate editor typings** | They come from your datamodel and go stale when the organization gains a datastream. |
+
+### What each family supports
+
+og itself is not uniform across families, and the extension follows it rather
+than pretending otherwise:
+
+| | Diff | What deploying would change | Validate | Deploy |
+|---|---|---|---|---|
+| Rule, connector function, provision function | yes | yes | yes | yes |
+| Dashboard | yes | yes | — | yes |
+| Widget | yes | as its dashboard | — | as its dashboard |
+| Workspace | — | yes | — | yes |
+
+A widget is a grid item, not something the platform can address on its own, so
+the dashboard it sits in is the smallest unit og can compare or deploy. Editing
+a widget works exactly as editing a rule does — the diff on a formatter shows
+that formatter — but the deploy and its preview act on the dashboard, and say so
+before they do. It is the same boundary `og watch` draws.
+
+A workspace is the one artifact with no single-file view: compare the whole tree
+instead.
 
 Every command acts on the artifact the file belongs to, found by walking up for
 `rule.json`, `connectorfunction.json`, `provisionfunction.json`, `widget.json`,
@@ -186,11 +207,12 @@ both over the same tree: two watchers produce duplicate deploys.
 | *you are not logged in* / *your session expired* | Take **Log in**. The difference matters: one means you never did, the other that it lapsed |
 | `HTTP 401: Unauthorized` | A session the platform rejected. Take the **Log in** button on the error |
 | *the CLI was not found* | No `og` on `PATH`. Take **Download it**, or set `og.path` |
-| *older than 2.2.0* | Your og predates `show --path`, which the diff needs. Take the offer to fetch a newer one |
+| *older than 2.4.0* | Your og predates `dashboard show`/`dashboard diff`, so widgets are not editable. Take the offer to fetch a newer one |
 | The **OpenGate** submenu is missing | The extension activates on a folder that contains artifacts. Open one, or pull something from the Platform view first |
 | Workspaces will not list | They need the Web API token. Log in again choosing **Everything** |
 | No completion in a `.js` | That artifact has no `og-globals.d.ts`. Run **Regenerate editor typings** |
 | A diff opens empty | Usually an og too old for `show --path` |
+| *og has no single-file view of a workspace* | Correct: use **What deploying this artifact would change**, which compares the whole tree |
 
 ---
 

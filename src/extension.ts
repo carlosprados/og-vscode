@@ -154,14 +154,30 @@ function status(uri?: vscode.Uri): void {
       void vscode.window.showWarningMessage("og: this file is not inside an artifact directory");
       return;
     }
-    const res = await cli.run([art.family.command, "diff", art.dir]);
+    // A widget has no diff of its own — it is a grid item, and the dashboard is
+    // the smallest thing og can compare or deploy — so the comparison happens
+    // one level up, and says so rather than looking like it ignored the request.
+    const target = artifact.anchor(art);
+    if (!target) {
+      void vscode.window.showWarningMessage(
+        `og: a ${art.family.kind} is compared through its dashboard, and this one is not inside a pulled dashboard directory`,
+      );
+      return;
+    }
+    if (target.dir !== art.dir) {
+      void vscode.window.showInformationMessage(
+        `og: comparing the ${target.family.kind} ${path.basename(target.dir)} — og has no diff for a single ${art.family.kind}.`,
+      );
+    }
+
+    const res = await cli.run([target.family.command, "diff", target.dir]);
     if (res.code === cli.EXIT_FAILURE) {
       cli.reportFailure(res, "diff failed");
       return;
     }
     // og's text, not a re-render: it carries the three-way state markers, the
     // pruned workspace tree and the note about which fields were ignored.
-    await showText(`og diff — ${path.basename(art.dir)}`, res.stdout.trim() || "No differences.");
+    await showText(`og diff — ${path.basename(target.dir)}`, res.stdout.trim() || "No differences.");
   });
 }
 
@@ -171,15 +187,33 @@ function deploy(uri?: vscode.Uri): void {
 
 /** runDeploy pushes the artifact, showing what would change first when asked. */
 async function runDeploy(filePath: string, confirm: boolean): Promise<void> {
-  const art = artifact.find(filePath);
+  const found = artifact.find(filePath);
+  if (!found) {
+    return;
+  }
+
+  // A widget cannot be deployed on its own: the platform has no endpoint for a
+  // grid item, so the dashboard is what goes. This is the rule `og workspace
+  // watch` already follows for a widget edit, and the confirmation below shows
+  // the dashboard's diff, so what is sent is what was agreed to.
+  const art = artifact.anchor(found);
   if (!art) {
+    void vscode.window.showWarningMessage(
+      `og: a ${found.family.kind} deploys as its dashboard, and this one is not inside a pulled dashboard directory`,
+    );
     return;
   }
   const name = path.basename(art.dir);
+  if (art.dir !== found.dir) {
+    void vscode.window.showInformationMessage(
+      `og: a ${found.family.kind} deploys as its ${art.family.kind} — ${name} is what will be sent.`,
+    );
+  }
 
   if (confirm) {
     // Deploying blind is the habit og's diff was written to break; a quicker
     // keybinding is no reason to reintroduce it.
+    //
     const preview = await cli.run([art.family.command, "diff", art.dir]);
     if (preview.code === cli.EXIT_FAILURE) {
       cli.reportFailure(preview, "cannot read the remote artifact; not deploying");
