@@ -9,6 +9,14 @@
 
 import { execFile } from "node:child_process";
 import * as vscode from "vscode";
+import * as binary from "./binary";
+
+let extensionContext: vscode.ExtensionContext | undefined;
+
+/** init hands the module the context the binary cache lives in. */
+export function init(context: vscode.ExtensionContext): void {
+  extensionContext = context;
+}
 
 /** og's exit codes, shared by diff and validate so CI can gate on them. */
 export const EXIT_OK = 0;
@@ -46,8 +54,17 @@ function globalArgs(): string[] {
  * is og working correctly, and turning that into an exception would make every
  * caller unwrap it again.
  */
-export function run(args: string[], cwd?: string): Promise<Result> {
-  const bin = config().get<string>("path", "og");
+export async function run(args: string[], cwd?: string): Promise<Result> {
+  if (!extensionContext) {
+    return { code: EXIT_FAILURE, stdout: "", stderr: "the extension is not initialised" };
+  }
+  const bin = await binary.resolve(extensionContext);
+  if (!bin) {
+    // resolve has already told the user what is wrong and offered a fix; a
+    // second message here would just be noise.
+    return { code: EXIT_FAILURE, stdout: "", stderr: "" };
+  }
+
   const timeout = config().get<number>("timeout", 30000);
   const full = [...globalArgs(), ...args];
 
@@ -96,6 +113,11 @@ export async function runJson<T>(args: string[], cwd?: string): Promise<{ data: 
  * passing them through beats wrapping them in an extension-flavoured sentence.
  */
 export function reportFailure(res: Result, context: string): void {
-  const message = res.stderr.trim() || res.stdout.trim() || `og exited ${res.code}`;
+  const message = res.stderr.trim() || res.stdout.trim();
+  if (!message) {
+    // Nothing to add: the binary could not be resolved, and that was already
+    // reported with the choices that go with it.
+    return;
+  }
   void vscode.window.showErrorMessage(`og: ${context}\n${message}`);
 }

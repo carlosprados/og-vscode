@@ -12,6 +12,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import * as artifact from "./artifact";
+import * as binary from "./binary";
 import * as cli from "./cli";
 import { Diagnostics } from "./diagnostics";
 import { RemoteContentProvider, SCHEME, openDiff } from "./remote";
@@ -19,8 +20,21 @@ import { RemoteContentProvider, SCHEME, openDiff } from "./remote";
 let diagnostics: Diagnostics;
 
 export function activate(context: vscode.ExtensionContext): void {
+  cli.init(context);
+
   diagnostics = new Diagnostics();
   context.subscriptions.push(diagnostics);
+
+  // Changing where the binary is means the cached resolution is stale, and a
+  // user who has just fixed og.path should not have to reload the window to
+  // find out whether it worked.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("og.path")) {
+        binary.forget();
+      }
+    }),
+  );
 
   context.subscriptions.push(
     vscode.workspace.registerTextDocumentContentProvider(SCHEME, new RemoteContentProvider()),

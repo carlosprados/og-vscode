@@ -35,9 +35,20 @@ What this adds is everything around that.
 ## Requirements
 
 - VS Code 1.85+
-- The [`og`](https://github.com/carlosprados/og-cli) binary **2.2.0 or newer** on
-  `PATH`, logged in (`og login`). Older builds lack `og <family> show --path`,
-  which the diff view depends on.
+- The [`og`](https://github.com/carlosprados/og-cli) binary, logged in
+  (`og login`).
+
+You do not have to install og yourself. The extension looks for it in this
+order: the `og.path` setting, then `og` on your `PATH`, then a copy it keeps for
+itself. If it finds none it offers to download the right build for your machine,
+**verifies its SHA-256 against the release's `checksums.txt`**, and caches it —
+this puts an executable on your machine and then runs it against your platform,
+so taking whatever arrives on trust would be the wrong trade.
+
+**2.2.0 or newer** is required: older builds lack `og <family> show --path`,
+which the diff depends on. An older one on your PATH is detected and reported,
+with the offer to fetch a newer one, rather than failing later with an empty
+diff and no explanation.
 
 ## Commands
 
