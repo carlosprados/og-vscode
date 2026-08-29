@@ -23,36 +23,49 @@ The extension id is `<publisher>.<name>`, so today that is
 
 ## 1. Visual Studio Marketplace — one-time setup
 
-The Marketplace authenticates through Azure DevOps, which is the part nobody
-guesses.
+**Do not create an Azure DevOps organization.** The commonly cited route — an
+Azure DevOps org, a Personal Access Token, `vsce login` — is both avoidable and
+on its way out:
 
-**1.1 Create an Azure DevOps organization** (free) at
-<https://aex.dev.azure.com>. Sign in with a Microsoft account. Any organization
-name; it is only a container for the token.
+- Creating an org now asks you to link an Azure subscription for billing, and
+  the *Continue* button simply sits there disabled if you have none. The page
+  does not say that is why. Publishing is free; that gate belongs to a step you
+  do not need to take.
+- **Global PATs in Azure DevOps are retired on 1 December 2026.** Anything built
+  on them has a deadline. Microsoft's replacement is Microsoft Entra ID with
+  workload identity federation.
 
-**1.2 Create a Personal Access Token.**
+The web portal needs neither.
 
-- In Azure DevOps: *User settings* (top right) → *Personal access tokens* → *New Token*.
-- **Organization: `All accessible organizations`.** This is the step that most
-  often goes wrong — a token scoped to one organization is rejected by the
-  Marketplace with an unhelpful error.
-- Scopes: *Custom defined* → find **Marketplace** → tick **Manage**.
-- Expiration: up to a year. Note the date; a publish failing months from now with
-  a 401 is otherwise a mystery.
-- Copy the token. It is shown once.
+**1.1 Create the publisher** at
+<https://marketplace.visualstudio.com/manage/createpublisher>, signed in with a
+Microsoft account. Only **Name** and **ID** are required, and the ID must match
+`"publisher"` in `package.json` exactly — today, `carlosprados`.
 
-**1.3 Create the publisher** at
-<https://marketplace.visualstudio.com/manage>. The name must match
-`"publisher"` in `package.json` exactly.
+Leave **Verified domain** empty. Verification is not typing a URL: it wants a TXT
+record in the domain's DNS, and the *Verify* button stays greyed out until that
+resolves. It can be added later from the publisher settings, and blocking a
+first publish on DNS propagation is not a trade worth making.
 
-**1.4 Log in locally.**
+Everything under *About you* is the publisher profile, not the extension
+listing, and is editable afterwards.
+
+**1.2 Upload the package.** From the publisher page: **+ New extension** →
+**Visual Studio Code** → select the `.vsix` built in §4.
+
+The first upload runs a virus scan, so it sits at *Verifying* for a few minutes.
+It is live once this returns the extension:
 
 ```bash
-cd og-vscode
-npx vsce login carlosprados      # paste the PAT when asked
+curl -s -X POST https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery \
+  -H "Accept: application/json;api-version=7.2-preview.1" \
+  -H "Content-Type: application/json" \
+  -d '{"filters":[{"criteria":[{"filterType":7,"value":"carlosprados.og-vscode"}]}],"flags":914}'
 ```
 
-The token is stored in your keychain, so this is not repeated per release.
+**When a token becomes worth it.** `vsce publish` from the command line still
+needs one, and so does CI. Until the Entra ID flow is set up, uploading the
+`.vsix` by hand is one drag per release and needs no credentials at all.
 
 ---
 
@@ -81,11 +94,13 @@ Without it the first publish fails with a namespace error.
 
 ## 3. Store the tokens
 
-Do not put them in the repository. For local publishing, keep them in your
-password manager and paste when asked. For CI, GitHub repository secrets:
+Only Open VSX needs one for the manual path. Do not put it in the repository;
+keep it in your password manager and paste when asked. For CI, GitHub repository
+secrets:
 
-- `VSCE_PAT` — the Azure DevOps token from §1.2
 - `OVSX_PAT` — the Open VSX token from §2.3
+- `VSCE_PAT` — only if you set up command-line publishing to the Marketplace,
+  and note its December 2026 deadline (§1)
 
 ---
 
@@ -119,10 +134,17 @@ bugs here were found by running it, not by compiling it.
 
 ## 5. Per release — publish
 
+Marketplace: **+ New extension** → **Visual Studio Code** → the `.vsix` from §4,
+on the publisher page. No credentials involved.
+
+Open VSX, which does use a token:
+
 ```bash
-npx vsce publish                      # Visual Studio Marketplace
-npx ovsx publish -p <OPEN_VSX_TOKEN>  # Open VSX
+npx ovsx publish -p <OPEN_VSX_TOKEN>
 ```
+
+`vsce publish` also works once a token exists, but see §1 before reaching for
+one.
 
 `vsce publish` can bump for you — `npx vsce publish minor` — which also creates a
 git tag. Skip that if you prefer to tag by hand, as og-cli does.
@@ -177,7 +199,9 @@ it, not only after:
 
 | Symptom | Cause |
 |---|---|
-| `401 Unauthorized` on `vsce login` | The PAT is scoped to one organization instead of *All accessible organizations* (§1.2) |
+| *Continue* greyed out creating an Azure DevOps organization | It wants an Azure subscription linked for billing and says so in small print. You do not need the organization at all — see §1 |
+| `401 Unauthorized` on `vsce login` | The PAT is scoped to one organization instead of *All accessible organizations*. Only relevant if you went the token route |
+| `Verify` greyed out on the publisher's domain | Verification needs a DNS TXT record, not just the URL typed in. Leave it empty; add it later |
 | `ERROR namespace not found` | The Open VSX namespace was never claimed (§2.4) |
 | `ERROR The Publisher Agreement...` | Not signed (§2.2) |
 | Publish succeeds, extension does not appear | Indexing delay, or a first-publish virus scan. Check the publisher management page |
