@@ -45,12 +45,12 @@ export async function resolve(context: vscode.ExtensionContext): Promise<string 
   const candidates = configured !== "og" ? [configured] : ["og", cachedPath(context)];
 
   for (const candidate of candidates) {
-    const version = await versionOf(candidate);
-    if (!version) {
+    const { runs, version } = await probe(candidate);
+    if (!runs) {
       continue;
     }
     resolved = candidate;
-    if (isOlderThanMinimum(version) && !warnedAboutVersion) {
+    if (version && isOlderThanMinimum(version) && !warnedAboutVersion) {
       warnedAboutVersion = true;
       void vscode.window
         .showWarningMessage(
@@ -85,17 +85,30 @@ export async function resolve(context: vscode.ExtensionContext): Promise<string 
   return resolved;
 }
 
-/** versionOf runs `<bin> version` and returns the version, or undefined. */
-function versionOf(bin: string): Promise<string | undefined> {
+interface Probe {
+  runs: boolean;
+  version?: string;
+}
+
+/**
+ * probe reports whether a candidate runs, and what version it claims.
+ *
+ * Running and being parseable are two different questions, and conflating them
+ * was a bug: a binary built from source prints "og dev (commit: unknown)" with
+ * no version in it, and treating that as "no binary at all" told the user the
+ * CLI was missing while it sat right there. It runs, so it is usable; the
+ * version is only needed to warn about missing features.
+ */
+function probe(bin: string): Promise<Probe> {
   return new Promise((done) => {
     execFile(bin, ["version"], { timeout: 10000 }, (error, stdout) => {
       if (error) {
-        done(undefined);
+        done({ runs: false });
         return;
       }
       // `og 2.2.1 (commit: …, built: …)`
       const match = /(\d+)\.(\d+)\.(\d+)/.exec(stdout ?? "");
-      done(match ? match[0] : undefined);
+      done({ runs: true, version: match ? match[0] : undefined });
     });
   });
 }
@@ -182,7 +195,7 @@ async function download(context: vscode.ExtensionContext): Promise<string | unde
         if (process.platform !== "win32") {
           await fs.promises.chmod(bin, 0o755);
         }
-        if (!(await versionOf(bin))) {
+        if (!(await probe(bin)).runs) {
           throw new Error("the downloaded binary does not run");
         }
 
